@@ -1,0 +1,105 @@
+{
+  "theme": "dark",
+  "archetype": "2 (The Performance Pro)",
+  "typography": {
+    "fonts": {
+      "heading": "Barlow Condensed",
+      "body": "DM Sans",
+      "mono": "JetBrains Mono"
+    },
+    "rules": {
+      "h1": "text-4xl sm:text-5xl lg:text-6xl font-black tracking-tighter uppercase",
+      "h2": "text-2xl sm:text-3xl lg:text-4xl font-bold tracking-tight uppercase",
+      "h3": "text-xl sm:text-2xl font-bold uppercase",
+      "body": "text-base tracking-wide font-normal",
+      "labels": "text-xs tracking-[0.2em] uppercase font-bold text-muted-foreground"
+    }
+  },
+  "colors": {
+    "background": "Deep Obsidian (#0A0A0A) - Maps to `bg-neutral-950` or custom HSL.",
+    "foreground": "Pure White (#FFFFFF)",
+    "primary": "Volt Blue (#007AFF)",
+    "accent": "Electric Blaze (#FF3B30)",
+    "success": "Neon Green (#39FF14) - Use sparingly for 'Available' slots",
+    "shadcn_variables": {
+      "dark": {
+        "--background": "240 10% 4%",
+        "--foreground": "0 0% 100%",
+        "--card": "240 5% 6%",
+        "--card-foreground": "0 0% 100%",
+        "--popover": "240 5% 6%",
+        "--popover-foreground": "0 0% 100%",
+        "--primary": "211 100% 50%",
+        "--primary-foreground": "0 0% 100%",
+        "--secondary": "0 100% 60%",
+        "--secondary-foreground": "0 0% 100%",
+        "--muted": "240 5% 15%",
+        "--muted-foreground": "240 5% 65%",
+        "--accent": "240 5% 15%",
+        "--accent-foreground": "0 0% 100%",
+        "--border": "240 5% 15%",
+        "--input": "240 5% 15%",
+        "--ring": "211 100% 50%",
+        "--radius": "0.5rem"
+      }
+    }
+  },
+  "layout_and_spacing": {
+    "generous_spacing": true,
+    "container_padding": "p-6 md:p-8 lg:p-12",
+    "grid_strategy": {
+      "mode": "CONTROL_ROOM",
+      "gap": "gap-4 md:gap-6",
+      "description": "Dense data correlation for turf availability schedules. Every pixel utilized. Sharp corners or max 8px radius."
+    }
+  },
+  "surface_strategies": {
+    "cards": "Tactical Minimalism. No soft shadows. Use 1px solid borders (border-white/10) with flat Deep Obsidian backgrounds.",
+    "headers": "Solid black background (bg-black/90) with a sharp 1px bottom border or Crystal Glass (backdrop-blur-xl bg-black/60 border-b border-white/10).",
+    "buttons": "High-saturation primary blocks with zero border-radius (or max 4px). Hover state must increase brightness and retain high contrast text.",
+    "active_states": "Use 2px 'Inner Glow' highlights (ring-inset ring-2 ring-primary) to denote selected time slots.",
+    "glassmorphism": "Only use for sticky headers or floating navs. bg-black/60 with backdrop-blur-xl and border-white/10."
+  },
+  "animations": {
+    "hover": "Instant response. Scale transform disabled, prefer color shifting or hard border reveals.",
+    "transitions": "transition-colors duration-200 ease-in-out"
+  },
+  "components_instructions": {
+    "buttons": "Always explicitly define hover text color. Example: hover:bg-blue-600 hover:text-white",
+    "booking_grid": "Use CSS Grid (grid-cols-4 or grid-cols-7 for days/times). Highlight available slots with subtle green or white border, booked slots with disabled styling (opacity-50).",
+    "forms": "Use customized Shadcn UI forms. Inputs must have flat backgrounds, 1px border, no ring unless focused. Focus state gets Volt Blue ring.",
+    "testing": "All interactive elements MUST have data-testid attributes (e.g., data-testid='book-slot-btn')."
+  },
+  "media": {
+    "image_urls": {
+      "hero_background": {
+        "url": "https://images.unsplash.com/photo-1671209151455-86980f5bf293?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwzfHxmb290YmFsbCUyMHR1cmYlMjBuaWdodHxlbnwwfHx8fDE3NzYwNjEwOTZ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Soccer field covered in green grass at night. Use with bg-black/50 to bg-black/70 overlay."
+      },
+      "turf_listing_1": {
+        "url": "https://images.unsplash.com/photo-1759210720456-c9814f721479?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2NzZ8MHwxfHNlYXJjaHwxfHxmb290YmFsbCUyMHR1cmYlMjBuaWdodHxlbnwwfHx8fDE3NzYwNjEwOTZ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "People playing soccer on a brightly lit field at night."
+      },
+      "turf_listing_2": {
+        "url": "https://images.unsplash.com/photo-1543503430-9bb747e6b206?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwzfHxwZW9wbGUlMjBwbGF5aW5nJTIwZm9vdGJhbGwlMjB0dXJmfGVufDB8fHx8MTc3NjA2MTA5Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "Boys playing soccer on a field."
+      },
+      "turf_listing_3": {
+        "url": "https://images.unsplash.com/photo-1689574528928-bc796b75e8ff?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2OTF8MHwxfHNlYXJjaHwyfHxwZW9wbGUlMjBwbGF5aW5nJTIwZm9vdGJhbGwlMjB0dXJmfGVufDB8fHx8MTc3NjA2MTA5Nnww&ixlib=rb-4.1.0&q=85",
+        "description": "A group of people standing on top of a lush green field."
+      }
+    }
+  },
+  "instructions_to_main_agent": [
+    "You MUST use a dark theme by default (Archetype 2: Performance Pro). Update index.css and tailwind.config.js to enforce this.",
+    "DO NOT use generic sans-serif for headings. Implement 'Barlow Condensed' via Google Fonts.",
+    "Install @phosphor-icons/react for high-energy tactical icons.",
+    "Implement the layout with dense 'Control Room' grids for the turf booking time slots.",
+    "Ensure the hero section uses the provided hero_background image with a bg-gradient-to-r from-black/80 via-black/50 to-transparent overlay so text remains completely accessible.",
+    "All cards must be flat, cardless or have max 8px border-radius, with 1px border-white/10. No soft box-shadows.",
+    "Always apply data-testid attributes to buttons, links, inputs, and major sections.",
+    "Do NOT use 'Inter' for headings. Only use it or 'DM Sans' for body text.",
+    "Force dark mode by adding 'dark' class to html/body or updating the Tailwind config to default to dark variables.",
+    "For the booking time slots grid, use 'grid-cols-4 md:grid-cols-7' and strict alignment to make it scannable like a dashboard."
+  ]
+}
