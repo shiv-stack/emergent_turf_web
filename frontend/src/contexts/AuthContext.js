@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -17,10 +17,24 @@ function formatApiErrorDetail(detail) {
   return String(detail);
 }
 
-// Create axios instance with auth interceptor
+// Token storage — uses sessionStorage (clears on tab close) to reduce
+// XSS exposure window vs localStorage. Not a replacement for httpOnly
+// cookies, but the K8s ingress rewrites Access-Control-Allow-Origin to
+// wildcard which blocks credentialed cookie requests.
+const tokenStore = {
+  get: (key) => sessionStorage.getItem(key),
+  set: (key, val) => sessionStorage.setItem(key, val),
+  remove: (key) => sessionStorage.removeItem(key),
+  clearAll() {
+    sessionStorage.removeItem("access_token");
+    sessionStorage.removeItem("refresh_token");
+  },
+};
+
+// Axios instance with auth interceptor
 const authAxios = axios.create();
 authAxios.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access_token");
+  const token = tokenStore.get("access_token");
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -34,7 +48,7 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   const checkAuth = useCallback(async () => {
-    const token = localStorage.getItem("access_token");
+    const token = tokenStore.get("access_token");
     if (!token) {
       setUser(false);
       setLoading(false);
@@ -43,9 +57,9 @@ export function AuthProvider({ children }) {
     try {
       const { data } = await authAxios.get(`${API}/auth/me`);
       setUser(data);
-    } catch {
-      localStorage.removeItem("access_token");
-      localStorage.removeItem("refresh_token");
+    } catch (error) {
+      console.error("Auth check failed:", error);
+      tokenStore.clearAll();
       setUser(false);
     } finally {
       setLoading(false);
@@ -56,41 +70,47 @@ export function AuthProvider({ children }) {
     checkAuth();
   }, [checkAuth]);
 
-  const login = async (email, password) => {
+  const login = useCallback(async (email, password) => {
     try {
       const { data } = await axios.post(`${API}/auth/login`, { email, password });
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("refresh_token", data.refresh_token);
+      tokenStore.set("access_token", data.access_token);
+      tokenStore.set("refresh_token", data.refresh_token);
       setUser({ _id: data._id, email: data.email, name: data.name, role: data.role });
       return { success: true };
     } catch (e) {
       return { success: false, error: formatApiErrorDetail(e.response?.data?.detail) || e.message };
     }
-  };
+  }, []);
 
-  const register = async (name, email, password) => {
+  const register = useCallback(async (name, email, password) => {
     try {
       const { data } = await axios.post(`${API}/auth/register`, { name, email, password });
-      localStorage.setItem("access_token", data.access_token);
-      localStorage.setItem("refresh_token", data.refresh_token);
+      tokenStore.set("access_token", data.access_token);
+      tokenStore.set("refresh_token", data.refresh_token);
       setUser({ _id: data._id, email: data.email, name: data.name, role: data.role });
       return { success: true };
     } catch (e) {
       return { success: false, error: formatApiErrorDetail(e.response?.data?.detail) || e.message };
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
       await authAxios.post(`${API}/auth/logout`);
-    } catch { /* ignore */ }
-    localStorage.removeItem("access_token");
-    localStorage.removeItem("refresh_token");
+    } catch (error) {
+      console.error("Logout request failed:", error);
+    }
+    tokenStore.clearAll();
     setUser(false);
-  };
+  }, []);
+
+  const value = useMemo(
+    () => ({ user, loading, login, register, logout, checkAuth }),
+    [user, loading, login, register, logout, checkAuth]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, checkAuth }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );

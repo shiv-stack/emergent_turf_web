@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { ArrowRight, MagnifyingGlass, MapPin, Trophy, Lightning } from "@phosphor-icons/react";
@@ -12,9 +12,18 @@ export default function HomePage() {
   const [turfs, setTurfs] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
 
-  useEffect(() => {
-    axios.get(`${API}/turfs`).then(res => setTurfs(res.data)).catch(() => {});
+  const fetchFeaturedTurfs = useCallback(async () => {
+    try {
+      const { data } = await axios.get(`${API}/turfs`);
+      setTurfs(data);
+    } catch (error) {
+      console.error("Failed to fetch featured turfs:", error);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchFeaturedTurfs();
+  }, [fetchFeaturedTurfs]);
 
   const handleSearch = (e) => {
     e.preventDefault();
