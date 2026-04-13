@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { authAxios } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import { CalendarCheck, MapPin, Clock, XCircle } from "@phosphor-icons/react";
 import { Badge } from "@/components/ui/badge";
@@ -23,7 +23,7 @@ export default function MyBookingsPage() {
 
   const fetchBookings = async () => {
     try {
-      const { data } = await axios.get(`${API}/bookings/my`, { withCredentials: true });
+      const { data } = await authAxios.get(`${API}/bookings/my`);
       setBookings(data);
     } catch {
       setBookings([]);

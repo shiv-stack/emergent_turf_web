@@ -4,26 +4,37 @@ import json
 from datetime import datetime, timedelta
 
 class TurfBookingAPITester:
-    def __init__(self, base_url="https://pitch-book-6.preview.emergentagent.com/api"):
+    def __init__(self, base_url="https://35125558-78b8-4814-9fa2-6e77a32bada2.preview.emergentagent.com/api"):
         self.base_url = base_url
         self.session = requests.Session()
         self.tests_run = 0
         self.tests_passed = 0
-        self.user_token = None
-        self.admin_token = None
+        self.user_access_token = None
+        self.user_refresh_token = None
+        self.admin_access_token = None
+        self.admin_refresh_token = None
         self.test_user_id = None
         self.test_booking_id = None
 
-    def run_test(self, name, method, endpoint, expected_status, data=None, cookies=None, headers=None):
+    def run_test(self, name, method, endpoint, expected_status, data=None, use_auth=False, headers=None):
         """Run a single API test"""
         url = f"{self.base_url}/{endpoint}"
         test_headers = {'Content-Type': 'application/json'}
+        
+        # Add Bearer token if auth is required
+        if use_auth and self.user_access_token:
+            test_headers['Authorization'] = f'Bearer {self.user_access_token}'
+        elif use_auth and self.admin_access_token:
+            test_headers['Authorization'] = f'Bearer {self.admin_access_token}'
+            
         if headers:
             test_headers.update(headers)
 
         self.tests_run += 1
         print(f"\n🔍 Testing {name}...")
         print(f"   URL: {method} {url}")
+        if use_auth:
+            print(f"   Auth: Bearer token {'✓' if test_headers.get('Authorization') else '✗'}")
         
         try:
             if method == 'GET':
@@ -58,7 +69,7 @@ class TurfBookingAPITester:
             return False, {}
 
     def test_admin_login(self):
-        """Test admin login"""
+        """Test admin login and verify tokens"""
         success, response = self.run_test(
             "Admin Login",
             "POST",
@@ -66,13 +77,17 @@ class TurfBookingAPITester:
             200,
             data={"email": "admin@example.com", "password": "admin123"}
         )
-        if success and '_id' in response:
-            self.admin_token = response.get('_id')
+        if success and 'access_token' in response and 'refresh_token' in response:
+            self.admin_access_token = response['access_token']
+            self.admin_refresh_token = response['refresh_token']
+            print(f"   Admin ID: {response.get('_id')}")
+            print(f"   Access token: {'✓' if self.admin_access_token else '✗'}")
+            print(f"   Refresh token: {'✓' if self.admin_refresh_token else '✗'}")
             return True
         return False
 
     def test_user_registration(self):
-        """Test user registration"""
+        """Test user registration and verify tokens"""
         test_email = f"testuser_{datetime.now().strftime('%H%M%S')}@example.com"
         success, response = self.run_test(
             "User Registration",
@@ -81,13 +96,18 @@ class TurfBookingAPITester:
             200,
             data={"name": "Test User", "email": test_email, "password": "testpass123"}
         )
-        if success and '_id' in response:
+        if success and 'access_token' in response and 'refresh_token' in response:
             self.test_user_id = response['_id']
+            self.user_access_token = response['access_token']
+            self.user_refresh_token = response['refresh_token']
+            print(f"   User ID: {self.test_user_id}")
+            print(f"   Access token: {'✓' if self.user_access_token else '✗'}")
+            print(f"   Refresh token: {'✓' if self.user_refresh_token else '✗'}")
             return True, test_email
         return False, None
 
     def test_user_login(self, email):
-        """Test user login"""
+        """Test user login and verify tokens"""
         success, response = self.run_test(
             "User Login",
             "POST",
@@ -95,16 +115,24 @@ class TurfBookingAPITester:
             200,
             data={"email": email, "password": "testpass123"}
         )
-        return success
+        if success and 'access_token' in response and 'refresh_token' in response:
+            self.user_access_token = response['access_token']
+            self.user_refresh_token = response['refresh_token']
+            print(f"   Access token updated: {'✓' if self.user_access_token else '✗'}")
+            return True
+        return False
 
     def test_get_user_profile(self):
-        """Test get current user profile"""
+        """Test get current user profile with Bearer token"""
         success, response = self.run_test(
             "Get User Profile",
             "GET",
             "auth/me",
-            200
+            200,
+            use_auth=True
         )
+        if success and '_id' in response:
+            print(f"   Profile loaded for: {response.get('email')}")
         return success
 
     def test_logout(self):
@@ -184,7 +212,7 @@ class TurfBookingAPITester:
         return success1 and success2 and success3
 
     def test_create_booking(self, turf_id, time_slot):
-        """Test create booking"""
+        """Test create booking with Bearer token"""
         tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
         success, response = self.run_test(
             "Create Booking",
@@ -196,20 +224,23 @@ class TurfBookingAPITester:
                 "date": tomorrow,
                 "time_slot": time_slot,
                 "duration": 1
-            }
+            },
+            use_auth=True
         )
         if success and 'id' in response:
             self.test_booking_id = response['id']
+            print(f"   Booking ID: {self.test_booking_id}")
             return True
         return False
 
     def test_get_my_bookings(self):
-        """Test get user's bookings"""
+        """Test get user's bookings with Bearer token"""
         success, response = self.run_test(
             "Get My Bookings",
             "GET",
             "bookings/my",
-            200
+            200,
+            use_auth=True
         )
         if success and isinstance(response, list):
             print(f"   Found {len(response)} bookings")
@@ -217,7 +248,7 @@ class TurfBookingAPITester:
         return False
 
     def test_cancel_booking(self):
-        """Test cancel booking"""
+        """Test cancel booking with Bearer token"""
         if not self.test_booking_id:
             print("❌ No booking ID available for cancellation test")
             return False
@@ -226,20 +257,23 @@ class TurfBookingAPITester:
             "Cancel Booking",
             "PATCH",
             f"bookings/{self.test_booking_id}/cancel",
-            200
+            200,
+            use_auth=True
         )
         return success
 
     def test_auth_protected_endpoints(self):
-        """Test that protected endpoints require authentication"""
-        # Clear session cookies to test unauthorized access
-        self.session.cookies.clear()
+        """Test that protected endpoints require Bearer token authentication"""
+        # Test without any auth token
+        old_token = self.user_access_token
+        self.user_access_token = None
         
         success1, _ = self.run_test(
             "Protected Endpoint - My Bookings (Unauthorized)",
             "GET",
             "bookings/my",
-            401
+            401,
+            use_auth=True
         )
         
         success2, _ = self.run_test(
@@ -247,9 +281,12 @@ class TurfBookingAPITester:
             "POST",
             "bookings",
             401,
-            data={"turf_id": "turf-001", "date": "2026-04-15", "time_slot": "10:00", "duration": 1}
+            data={"turf_id": "turf-001", "date": "2026-04-15", "time_slot": "10:00", "duration": 1},
+            use_auth=True
         )
         
+        # Restore token
+        self.user_access_token = old_token
         return success1 and success2
 
 def main():

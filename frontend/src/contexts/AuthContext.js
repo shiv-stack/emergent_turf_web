@@ -17,15 +17,35 @@ function formatApiErrorDetail(detail) {
   return String(detail);
 }
 
+// Create axios instance with auth interceptor
+const authAxios = axios.create();
+authAxios.interceptors.request.use((config) => {
+  const token = localStorage.getItem("access_token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+export { authAxios };
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null); // null = checking, false = not auth
   const [loading, setLoading] = useState(true);
 
   const checkAuth = useCallback(async () => {
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      setUser(false);
+      setLoading(false);
+      return;
+    }
     try {
-      const { data } = await axios.get(`${API}/auth/me`, { withCredentials: true });
+      const { data } = await authAxios.get(`${API}/auth/me`);
       setUser(data);
     } catch {
+      localStorage.removeItem("access_token");
+      localStorage.removeItem("refresh_token");
       setUser(false);
     } finally {
       setLoading(false);
@@ -38,8 +58,10 @@ export function AuthProvider({ children }) {
 
   const login = async (email, password) => {
     try {
-      const { data } = await axios.post(`${API}/auth/login`, { email, password }, { withCredentials: true });
-      setUser(data);
+      const { data } = await axios.post(`${API}/auth/login`, { email, password });
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      setUser({ _id: data._id, email: data.email, name: data.name, role: data.role });
       return { success: true };
     } catch (e) {
       return { success: false, error: formatApiErrorDetail(e.response?.data?.detail) || e.message };
@@ -48,8 +70,10 @@ export function AuthProvider({ children }) {
 
   const register = async (name, email, password) => {
     try {
-      const { data } = await axios.post(`${API}/auth/register`, { name, email, password }, { withCredentials: true });
-      setUser(data);
+      const { data } = await axios.post(`${API}/auth/register`, { name, email, password });
+      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("refresh_token", data.refresh_token);
+      setUser({ _id: data._id, email: data.email, name: data.name, role: data.role });
       return { success: true };
     } catch (e) {
       return { success: false, error: formatApiErrorDetail(e.response?.data?.detail) || e.message };
@@ -58,8 +82,10 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     try {
-      await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
+      await authAxios.post(`${API}/auth/logout`);
     } catch { /* ignore */ }
+    localStorage.removeItem("access_token");
+    localStorage.removeItem("refresh_token");
     setUser(false);
   };
 

@@ -44,11 +44,12 @@ def create_refresh_token(user_id: str) -> str:
     return jwt.encode(payload, get_jwt_secret(), algorithm=JWT_ALGORITHM)
 
 async def get_current_user(request: Request) -> dict:
-    token = request.cookies.get("access_token")
+    token = None
+    auth_header = request.headers.get("Authorization", "")
+    if auth_header.startswith("Bearer "):
+        token = auth_header[7:]
     if not token:
-        auth_header = request.headers.get("Authorization", "")
-        if auth_header.startswith("Bearer "):
-            token = auth_header[7:]
+        token = request.cookies.get("access_token")
     if not token:
         raise HTTPException(status_code=401, detail="Not authenticated")
     try:
@@ -97,7 +98,7 @@ class TurfCreate(BaseModel):
 
 # --- Auth Routes ---
 @api_router.post("/auth/register")
-async def register(input: RegisterInput, response: Response):
+async def register(input: RegisterInput):
     email = input.email.lower().strip()
     existing = await db.users.find_one({"email": email})
     if existing:
@@ -114,12 +115,10 @@ async def register(input: RegisterInput, response: Response):
     user_id = str(result.inserted_id)
     access_token = create_access_token(user_id, email)
     refresh_token = create_refresh_token(user_id)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
-    return {"_id": user_id, "email": email, "name": input.name, "role": "user"}
+    return {"_id": user_id, "email": email, "name": input.name, "role": "user", "access_token": access_token, "refresh_token": refresh_token}
 
 @api_router.post("/auth/login")
-async def login(input: LoginInput, response: Response, request: Request):
+async def login(input: LoginInput, request: Request):
     email = input.email.lower().strip()
     ip = request.client.host if request.client else "unknown"
     identifier = f"{ip}:{email}"
@@ -144,14 +143,10 @@ async def login(input: LoginInput, response: Response, request: Request):
     user_id = str(user["_id"])
     access_token = create_access_token(user_id, email)
     refresh_token = create_refresh_token(user_id)
-    response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-    response.set_cookie(key="refresh_token", value=refresh_token, httponly=True, secure=False, samesite="lax", max_age=604800, path="/")
-    return {"_id": user_id, "email": email, "name": user.get("name", ""), "role": user.get("role", "user")}
+    return {"_id": user_id, "email": email, "name": user.get("name", ""), "role": user.get("role", "user"), "access_token": access_token, "refresh_token": refresh_token}
 
 @api_router.post("/auth/logout")
-async def logout(response: Response):
-    response.delete_cookie("access_token", path="/")
-    response.delete_cookie("refresh_token", path="/")
+async def logout():
     return {"message": "Logged out"}
 
 @api_router.get("/auth/me")
@@ -159,13 +154,13 @@ async def get_me(request: Request):
     user = await get_current_user(request)
     return user
 
+class RefreshInput(BaseModel):
+    refresh_token: str
+
 @api_router.post("/auth/refresh")
-async def refresh_token(request: Request, response: Response):
-    token = request.cookies.get("refresh_token")
-    if not token:
-        raise HTTPException(status_code=401, detail="No refresh token")
+async def refresh_token_endpoint(input: RefreshInput):
     try:
-        payload = jwt.decode(token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(input.refresh_token, get_jwt_secret(), algorithms=[JWT_ALGORITHM])
         if payload.get("type") != "refresh":
             raise HTTPException(status_code=401, detail="Invalid token type")
         user = await db.users.find_one({"_id": ObjectId(payload["sub"])})
@@ -173,8 +168,7 @@ async def refresh_token(request: Request, response: Response):
             raise HTTPException(status_code=401, detail="User not found")
         user_id = str(user["_id"])
         access_token = create_access_token(user_id, user["email"])
-        response.set_cookie(key="access_token", value=access_token, httponly=True, secure=False, samesite="lax", max_age=3600, path="/")
-        return {"message": "Token refreshed"}
+        return {"access_token": access_token}
     except jwt.InvalidTokenError:
         raise HTTPException(status_code=401, detail="Invalid refresh token")
 
@@ -408,10 +402,19 @@ async def shutdown():
 # Include router
 app.include_router(api_router)
 
-# CORS
+# CORS - must be after include_router for proper wrapping
+frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+cors_origins = [frontend_url]
+extra_origins = os.environ.get("CORS_ORIGINS", "")
+if extra_origins and extra_origins != "*":
+    for o in extra_origins.split(","):
+        o = o.strip()
+        if o and o not in cors_origins:
+            cors_origins.append(o)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.environ.get("FRONTEND_URL", "http://localhost:3000")],
+    allow_origins=cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

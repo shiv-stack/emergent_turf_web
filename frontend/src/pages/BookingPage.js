@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { authAxios } from "@/contexts/AuthContext";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { Calendar } from "@/components/ui/calendar";
@@ -40,12 +41,12 @@ export default function BookingPage() {
     if (!selectedSlot || !selectedDate) return;
     setBooking(true);
     try {
-      await axios.post(`${API}/bookings`, {
+      await authAxios.post(`${API}/bookings`, {
         turf_id: id,
         date: format(selectedDate, "yyyy-MM-dd"),
         time_slot: selectedSlot,
         duration: 1
-      }, { withCredentials: true });
+      }, {});
       toast.success("Booking confirmed! Redirecting to your bookings...");
       setTimeout(() => navigate("/my-bookings"), 1500);
     } catch (e) {
